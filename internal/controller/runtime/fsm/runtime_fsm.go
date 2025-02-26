@@ -10,6 +10,7 @@ import (
 	"github.com/go-logr/logr"
 	imv1 "github.com/kyma-project/infrastructure-manager/api/v1"
 	"github.com/kyma-project/infrastructure-manager/internal/controller/metrics"
+	"github.com/kyma-project/infrastructure-manager/internal/log_level"
 	"github.com/kyma-project/infrastructure-manager/pkg/config"
 	"github.com/kyma-project/infrastructure-manager/pkg/gardener/shoot/extender/auditlogs"
 	"k8s.io/client-go/tools/record"
@@ -79,16 +80,19 @@ loop:
 			stateFnName := m.fn.name()
 			m.fn, result, err = m.fn(ctx, m, &state)
 			newStateFnName := m.fn.name()
-			m.log.WithValues("result", result, "err", err, "mFnIsNill", m.fn == nil).Info(fmt.Sprintf("switching state from %s to %s", stateFnName, newStateFnName))
+			m.log.V(log_level.TRACE).WithValues("result", result, "err", err, "mFnIsNill", m.fn == nil).Info(fmt.Sprintf("switching state from %s to %s", stateFnName, newStateFnName))
 			if m.fn == nil || err != nil {
 				break loop
 			}
 		}
 	}
 
-	m.log.WithValues("error", err).
+	if err != nil {
+		m.log.Error(err, "Reconciliation finished with error", "result", result)
+	}
+	m.log.V(log_level.DEBUG).
 		WithValues("result", result).
-		Info("reconciliation done")
+		Info("Reconciliation done")
 
 	if result != nil {
 		return *result, err
